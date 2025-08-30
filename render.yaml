@@ -1,11 +1,9 @@
 services:
   - type: web
     name: yamatter
-    env: node
+    env: docker
     region: oregon # 無料プランで利用可能
     plan: free # 無料プラン
-    buildCommand: npm install
-    startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
