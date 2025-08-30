@@ -2,20 +2,19 @@ services:
   - type: web
     name: yamatter
     env: node
-    region: singapore # 東京に近いシンガポール
+    region: oregon # 無料プランで利用可能
     plan: free # 無料プラン
     buildCommand: npm install
     startCommand: node backend/server.js
-    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: HOST
         value: 0.0.0.0
-      - key: SESSION_SECRET
-        generateValue: true # 自動生成
+      - key: DATABASE_PATH
+        value: /var/data/yamatter.db
     # ディスク（データベース用）
     disk:
       name: yamatter-data
