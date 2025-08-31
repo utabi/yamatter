@@ -18,3 +18,9 @@ services:
       name: yamatter-data
       mountPath: /var/data
       sizeGB: 1 # 1GB無料
+      
+    # 初期化スクリプト（最初のデプロイ時のみ）
+    initialDeployHook: |
+      echo "Checking database directory..."
+      ls -la /var/data/
+      echo "Database will be stored at: /var/data/yamatter.db"

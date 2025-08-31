@@ -15,8 +15,18 @@ class Database {
             // データベースディレクトリを作成
             const fs = require('fs');
             const dbDir = path.dirname(this.dbPath);
-            if (!fs.existsSync(dbDir)) {
-                fs.mkdirSync(dbDir, { recursive: true });
+            
+            console.log('Database path:', this.dbPath);
+            console.log('Database directory:', dbDir);
+            
+            // ディレクトリが存在しない場合は作成（権限エラーを無視）
+            try {
+                if (!fs.existsSync(dbDir)) {
+                    fs.mkdirSync(dbDir, { recursive: true });
+                    console.log('Created database directory:', dbDir);
+                }
+            } catch (err) {
+                console.warn('Could not create directory (may be using mounted disk):', err.message);
             }
             
             this.db = new sqlite3.Database(this.dbPath, (err) => {

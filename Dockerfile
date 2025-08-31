@@ -15,15 +15,16 @@ RUN npm ci --only=production && \
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-# データベースディレクトリ作成
-RUN mkdir -p backend/database
+# データベースディレクトリ作成（ローカル用と永続ディスク用）
+RUN mkdir -p backend/database /var/data
 
 # 非rootユーザー作成（セキュリティ）
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S yamada -u 1001
 
-# ファイル所有権変更
-RUN chown -R yamada:nodejs /app
+# ファイル所有権変更（/var/dataも含む）
+RUN chown -R yamada:nodejs /app && \
+    chown -R yamada:nodejs /var/data
 USER yamada
 
 # ポート公開
