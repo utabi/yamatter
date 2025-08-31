@@ -209,12 +209,20 @@ class TwitterAPI {
                 });
             }
             
-            // ツイート作成
-            const tweet = await this.db.createTweet({
-                authorId,
-                author,
-                content: sanitizedContent
-            });
+            // ユーザー作成または更新
+            await this.db.createOrUpdateUser(authorId, author);
+            
+            // ツイート作成（正しいシグネチャで呼び出し）
+            const tweetId = await this.db.createTweet(authorId, sanitizedContent);
+            
+            // 作成したツイートを取得
+            const tweet = await this.db.get(
+                `SELECT t.*, u.nickname as author_nickname 
+                 FROM tweets t 
+                 JOIN users u ON t.author_id = u.device_id 
+                 WHERE t.id = ?`,
+                [tweetId]
+            );
             
             // WebSocketで全クライアントに配信（認証済みユーザーのみ）
             this.io.to('authenticated').emit('newTweet', tweet);
@@ -227,9 +235,16 @@ class TwitterAPI {
             
         } catch (error) {
             console.error('Create tweet error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                authorId: req.body?.authorId,
+                content: req.body?.content
+            });
             res.status(500).json({ 
                 success: false, 
-                error: 'Failed to create tweet' 
+                error: 'Failed to create tweet',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
@@ -501,13 +516,20 @@ class TwitterAPI {
             // XSS対策: HTMLエスケープ
             const sanitizedContent = this.escapeHtml(content);
             
-            // 返信作成
-            const reply = await this.db.createReply({
-                tweetId: id,
-                authorId,
-                author,
-                content: sanitizedContent
-            });
+            // ユーザー作成または更新
+            await this.db.createOrUpdateUser(authorId, author);
+            
+            // 返信作成（正しいシグネチャで呼び出し）
+            const replyId = await this.db.createTweet(authorId, sanitizedContent, id);
+            
+            // 作成した返信を取得
+            const reply = await this.db.get(
+                `SELECT t.*, u.nickname as author_nickname 
+                 FROM tweets t 
+                 JOIN users u ON t.author_id = u.device_id 
+                 WHERE t.id = ?`,
+                [replyId]
+            );
             
             // WebSocketで全クライアントに配信
             this.io.to('authenticated').emit('newReply', {

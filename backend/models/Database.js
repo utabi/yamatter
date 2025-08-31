@@ -10,17 +10,31 @@ class Database {
         if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
             // Tursoを使用
             this.useTurso = true;
-            this.client = createClient({
-                url: process.env.TURSO_DATABASE_URL,
-                authToken: process.env.TURSO_AUTH_TOKEN
-            });
-            console.log('Using Turso database');
+            console.log('Turso database URL:', process.env.TURSO_DATABASE_URL);
+            console.log('Turso auth token exists:', !!process.env.TURSO_AUTH_TOKEN);
+            
+            try {
+                this.client = createClient({
+                    url: process.env.TURSO_DATABASE_URL,
+                    authToken: process.env.TURSO_AUTH_TOKEN
+                });
+                console.log('Using Turso database - client created');
+            } catch (err) {
+                console.error('Failed to create Turso client:', err);
+                throw err;
+            }
         } else {
             // ローカルSQLiteを使用
             this.useTurso = false;
             this.dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database/yamada_twitter.db');
             this.db = null;
             console.log('Using local SQLite database');
+            if (!process.env.TURSO_DATABASE_URL) {
+                console.log('TURSO_DATABASE_URL not set');
+            }
+            if (!process.env.TURSO_AUTH_TOKEN) {
+                console.log('TURSO_AUTH_TOKEN not set');
+            }
         }
     }
     
@@ -317,6 +331,19 @@ class Database {
         
         await this.run('DELETE FROM tweets WHERE id = ?', [tweetId]);
         return true;
+    }
+    
+    // 単一ツイート取得
+    async getTweet(tweetId) {
+        const tweet = await this.get(
+            `SELECT t.*, u.nickname as author_nickname 
+             FROM tweets t 
+             JOIN users u ON t.author_id = u.device_id 
+             WHERE t.id = ?`,
+            [tweetId]
+        );
+        
+        return tweet;
     }
     
     // ツイート取得（最新順）
