@@ -35,6 +35,11 @@ class YamadaTwitterServer {
     }
     
     setupMiddleware() {
+        // trust proxyの設定（Renderなどのプロキシ環境用）
+        if (process.env.NODE_ENV === 'production') {
+            this.app.set('trust proxy', true);
+        }
+        
         // セキュリティ（開発環境では緩和）
         if (process.env.NODE_ENV === 'production') {
             this.app.use(helmet({

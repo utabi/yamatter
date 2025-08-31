@@ -154,8 +154,16 @@ class AuthAPI {
                 });
             }
             
-            // アクティビティ更新
-            await this.db.updateUserActivity(deviceId);
+            // アクティビティ更新（メソッドが存在する場合のみ）
+            if (typeof this.db.updateUserActivity === 'function') {
+                await this.db.updateUserActivity(deviceId);
+            } else {
+                // 代替手段: last_seenを更新
+                await this.db.run(
+                    'UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE device_id = ?',
+                    [deviceId]
+                );
+            }
             
             // 機密情報を除外したレスポンス
             const safeUser = {
