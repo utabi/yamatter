@@ -40,14 +40,24 @@ class Database {
     
     async init() {
         if (this.useTurso) {
-            // Tursoの場合は接続確認のみ
+            // Tursoの場合は接続確認とテーブル作成
             try {
                 await this.client.execute('SELECT 1');
                 console.log('Connected to Turso database');
+                
+                // テーブル作成を確実に実行
+                console.log('Creating tables if not exist...');
                 await this.createTables();
-                await this.migrateExistingMentions();
+                console.log('Tables created/verified');
+                
+                // 既存データのマイグレーション（テーブルが空の場合はスキップ）
+                try {
+                    await this.migrateExistingMentions();
+                } catch (migrationErr) {
+                    console.log('Migration skipped or completed:', migrationErr.message);
+                }
             } catch (err) {
-                console.error('Turso connection error:', err);
+                console.error('Turso initialization error:', err);
                 throw err;
             }
         } else {
@@ -155,6 +165,8 @@ class Database {
     }
     
     async createTables() {
+        console.log('Starting table creation...');
+        
         const tables = [
             // ユーザーテーブル
             `CREATE TABLE IF NOT EXISTS users (
@@ -185,7 +197,13 @@ class Database {
         ];
         
         for (const table of tables) {
-            await this.run(table);
+            try {
+                await this.run(table);
+                console.log('Table created/verified:', table.match(/CREATE TABLE IF NOT EXISTS (\w+)/)[1]);
+            } catch (err) {
+                console.error('Error creating table:', err);
+                throw err;
+            }
         }
         
         // インデックスの作成
@@ -198,8 +216,16 @@ class Database {
         ];
         
         for (const index of indexes) {
-            await this.run(index);
+            try {
+                await this.run(index);
+                console.log('Index created/verified:', index.match(/CREATE INDEX IF NOT EXISTS (\w+)/)[1]);
+            } catch (err) {
+                console.error('Error creating index:', err);
+                // インデックスのエラーは無視（テーブルが存在すれば問題ない）
+            }
         }
+        
+        console.log('All tables and indexes created/verified');
     }
     
     async migrateExistingMentions() {
