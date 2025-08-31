@@ -112,27 +112,32 @@ class YamadaTwitterApp {
                     // 返信モーダルが開いていて、該当ツイートへの返信なら更新
                     const modal = document.querySelector('.modal');
                     if (modal && data.tweetId) {
-                        const repliesList = document.getElementById('replies-list');
-                        if (repliesList) {
-                            // 既存の返信リストに追加
-                            const replyHtml = `
-                                <div class="reply">
-                                    <div class="reply-header">
-                                        <span class="reply-author">${this.escapeHtml(data.reply.author_nickname)}</span>
-                                        <span class="reply-time">${this.formatTime(data.reply.created_at)}</span>
+                        // 現在開いているモーダルのツイートIDを取得
+                        const modalTweetId = modal.dataset.tweetId;
+                        // このツイートへの返信の場合のみ更新
+                        if (modalTweetId === data.tweetId) {
+                            const repliesList = document.getElementById('replies-list');
+                            if (repliesList) {
+                                // 既存の返信リストに追加
+                                const replyHtml = `
+                                    <div class="reply">
+                                        <div class="reply-header">
+                                            <span class="reply-author">${this.escapeHtml(data.reply.author_nickname)}</span>
+                                            <span class="reply-time">${this.formatTime(data.reply.created_at)}</span>
+                                        </div>
+                                        <div class="reply-content">${this.decorateText(data.reply.content)}</div>
                                     </div>
-                                    <div class="reply-content">${this.decorateText(data.reply.content)}</div>
-                                </div>
-                            `;
-                            
-                            // "まだ返信がありません"メッセージがあれば削除
-                            const noReplies = repliesList.querySelector('.no-replies');
-                            if (noReplies) {
-                                repliesList.innerHTML = '';
+                                `;
+                                
+                                // "まだ返信がありません"メッセージがあれば削除
+                                const noReplies = repliesList.querySelector('.no-replies');
+                                if (noReplies) {
+                                    repliesList.innerHTML = '';
+                                }
+                                
+                                // 新しい返信を追加
+                                repliesList.insertAdjacentHTML('afterbegin', replyHtml);
                             }
-                            
-                            // 新しい返信を追加
-                            repliesList.insertAdjacentHTML('afterbegin', replyHtml);
                         }
                     }
                     
@@ -556,6 +561,7 @@ class YamadaTwitterApp {
     showReplyModal(originalTweet) {
         const modal = document.createElement('div');
         modal.className = 'modal';
+        modal.dataset.tweetId = originalTweet.id;
         modal.innerHTML = `
             <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
             <div class="modal-content">
