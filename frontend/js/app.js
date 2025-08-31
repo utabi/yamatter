@@ -292,11 +292,31 @@ class YamadaTwitterApp {
             // WebSocket接続がある場合はWebSocket経由で送信
             if (this.socket && this.isConnected) {
                 console.log('WebSocket経由でツイート送信:', content);
-                this.socket.emit('newTweet', { content: content });
                 
-                input.value = '';
-                this.updateCharCount();
-                this.showSuccess('ツイートを投稿しました');
+                // エラーハンドリング用のタイムアウト
+                const timeoutId = setTimeout(() => {
+                    console.warn('ツイート送信がタイムアウトしました');
+                }, 5000);
+                
+                // 成功時の処理を一度だけ実行するためのフラグ
+                let processed = false;
+                
+                // 一時的なリスナーを設定
+                const handleNewTweet = (tweet) => {
+                    if (!processed && tweet.author_id === this.auth.deviceId) {
+                        processed = true;
+                        clearTimeout(timeoutId);
+                        input.value = '';
+                        this.updateCharCount();
+                        this.showSuccess('ツイートを投稿しました');
+                    }
+                };
+                
+                // 成功を待つ
+                this.socket.once('newTweet', handleNewTweet);
+                
+                // ツイートを送信
+                this.socket.emit('newTweet', { content: content });
                 return;
             }
             
