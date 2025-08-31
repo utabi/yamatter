@@ -208,7 +208,16 @@ class YamadaTwitterServer {
                     
                 } catch (error) {
                     console.error('New tweet error:', error);
-                    socket.emit('error', 'Failed to create tweet');
+                    
+                    // ニックネーム重複エラーの場合
+                    if (error.code === 'SQLITE_CONSTRAINT' && error.message.includes('users.nickname')) {
+                        socket.emit('error', {
+                            type: 'NICKNAME_DUPLICATE',
+                            message: 'このニックネームは既に使用されています。別の名前を選んでください。'
+                        });
+                    } else {
+                        socket.emit('error', 'Failed to create tweet');
+                    }
                 }
             });
             

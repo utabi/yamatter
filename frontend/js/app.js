@@ -106,6 +106,26 @@ class YamadaTwitterApp {
                     console.log('オンラインユーザー数:', count);
                 });
                 
+                // エラーハンドリング
+                this.socket.on('error', (error) => {
+                    console.error('Socket error:', error);
+                    
+                    // ニックネーム重複エラーの場合
+                    if (error.type === 'NICKNAME_DUPLICATE') {
+                        // ユーザーにアラートを表示
+                        alert(error.message);
+                        // ニックネーム入力欄にフォーカス
+                        const nicknameInput = document.getElementById('nickname-input');
+                        if (nicknameInput) {
+                            nicknameInput.focus();
+                            nicknameInput.select();
+                        }
+                    } else {
+                        // その他のエラー
+                        this.showError(typeof error === 'string' ? error : 'エラーが発生しました');
+                    }
+                });
+                
                 // 新しい返信を受信
                 this.socket.on('newReply', (data) => {
                     console.log('新しい返信受信:', data);
