@@ -5,7 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 
 class Database {
     constructor() {
-        this.dbPath = path.join(__dirname, '../database/yamada_twitter.db');
+        // 本番環境では永続ディスク、ローカルではデフォルトパス
+        this.dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database/yamada_twitter.db');
         this.db = null;
     }
     
