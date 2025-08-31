@@ -131,9 +131,6 @@ class YamadaTwitterServer {
         
         // 静的ファイル配信（APIルートの後に配置）
         const staticPath = path.join(__dirname, '../frontend');
-        console.log('Static files served from:', staticPath);
-        console.log('Directory exists:', require('fs').existsSync(staticPath));
-        console.log('JS directory exists:', require('fs').existsSync(path.join(staticPath, 'js')));
         this.app.use(express.static(staticPath));
         
         // Frontend routing (SPA)

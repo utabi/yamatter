@@ -18,9 +18,6 @@ COPY frontend/ ./frontend/
 # データベースディレクトリ作成
 RUN mkdir -p backend/database
 
-# デバッグ用：ファイル構造を確認
-RUN ls -la && ls -la frontend/ && ls -la frontend/js/
-
 # 非rootユーザー作成（セキュリティ）
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S yamada -u 1001
