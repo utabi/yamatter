@@ -105,6 +105,15 @@ class TwitterAPI {
                 .isLength({ min: 1, max: 20 })
                 .withMessage('Author name must be 1-20 characters')
         ], this.createReply.bind(this));
+        
+        // ツイート削除
+        this.router.delete('/:id', [
+            param('id').isUUID(),
+            body('authorId')
+                .isString()
+                .notEmpty()
+                .withMessage('Author ID is required')
+        ], this.deleteTweet.bind(this));
     }
     
     // ツイート一覧取得
@@ -522,6 +531,55 @@ class TwitterAPI {
     }
     
     // HTMLエスケープ（XSS対策）
+    async deleteTweet(req, res) {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ 
+                    success: false, 
+                    errors: errors.array() 
+                });
+            }
+            
+            const { id } = req.params;
+            const { authorId } = req.body;
+            
+            // ツイートの所有者確認
+            const tweet = await this.db.getTweet(id);
+            if (!tweet) {
+                return res.status(404).json({ 
+                    success: false, 
+                    error: 'Tweet not found' 
+                });
+            }
+            
+            if (tweet.author_id !== authorId) {
+                return res.status(403).json({ 
+                    success: false, 
+                    error: 'Unauthorized to delete this tweet' 
+                });
+            }
+            
+            // 削除実行（論理削除）
+            await this.db.deleteTweet(id);
+            
+            // WebSocket通知
+            this.io.emit('tweetDeleted', { tweetId: id });
+            
+            res.json({ 
+                success: true, 
+                message: 'Tweet deleted successfully' 
+            });
+            
+        } catch (error) {
+            console.error('Delete tweet error:', error);
+            res.status(500).json({ 
+                success: false, 
+                error: 'Failed to delete tweet' 
+            });
+        }
+    }
+    
     escapeHtml(text) {
         const map = {
             '&': '&amp;',

@@ -306,6 +306,15 @@ class Database {
         `, [tweetId]);
     }
     
+    async deleteTweet(tweetId) {
+        return await this.run(`
+            UPDATE tweets 
+            SET is_deleted = 1, 
+                updated_at = datetime('now') 
+            WHERE id = ?
+        `, [tweetId]);
+    }
+    
     async getTweets(limit = 50, offset = 0) {
         return await this.all(`
             SELECT 

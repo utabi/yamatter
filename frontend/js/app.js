@@ -562,6 +562,14 @@ class YamadaTwitterApp {
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.dataset.tweetId = originalTweet.id;
+        
+        // 現在のユーザーが投稿者かチェック
+        const currentUser = this.auth.getCurrentUser();
+        const isMyTweet = currentUser && (
+            originalTweet.author_id === currentUser.deviceId ||
+            originalTweet.author_nickname === currentUser.nickname
+        );
+        
         modal.innerHTML = `
             <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
             <div class="modal-content">
@@ -570,6 +578,9 @@ class YamadaTwitterApp {
                     <div class="tweet-header">
                         <span class="tweet-author">${this.escapeHtml(originalTweet.author_nickname)}</span>
                         <span class="tweet-time">${this.formatTime(originalTweet.created_at)}</span>
+                        ${isMyTweet ? `
+                            <button class="delete-tweet-btn" onclick="app.deleteTweet('${originalTweet.id}')" style="float: right; background: #666; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">削除</button>
+                        ` : ''}
                     </div>
                     <div class="tweet-content">${this.decorateText(originalTweet.content)}</div>
                 </div>
@@ -647,6 +658,48 @@ class YamadaTwitterApp {
             if (repliesList) {
                 repliesList.innerHTML = '<div class="error">返信の読み込みに失敗しました</div>';
             }
+        }
+    }
+    
+    async deleteTweet(tweetId) {
+        try {
+            if (!confirm('このツイートを削除しますか？')) {
+                return;
+            }
+            
+            const currentUser = this.auth.getCurrentUser();
+            if (!currentUser) {
+                this.showError('ログインしてください');
+                return;
+            }
+            
+            const response = await fetch(`/api/tweets/${tweetId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    authorId: currentUser.deviceId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showSuccess('ツイートを削除しました');
+                
+                // モーダルを閉じる
+                const modal = document.querySelector('.modal');
+                if (modal) modal.remove();
+                
+                // タイムラインを更新
+                this.loadTweets();
+            } else {
+                this.showError(result.error || '削除に失敗しました');
+            }
+        } catch (error) {
+            console.error('削除エラー:', error);
+            this.showError('削除に失敗しました');
         }
     }
     
