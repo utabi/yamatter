@@ -8,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # 依存関係インストール（本番環境用）
-RUN npm ci --only=production && \
+# npm ciがlibsqlで失敗するのでnpm installを使用
+RUN npm install --production && \
     npm cache clean --force
 
 # アプリケーションファイルをコピー
