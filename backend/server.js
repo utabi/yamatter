@@ -97,8 +97,16 @@ class YamadaTwitterServer {
     
     setupRoutes() {
         // API Routes
-        this.app.use('/api/auth', new AuthAPI(this.db).router);
+        const authAPI = new AuthAPI(this.db);
+        this.app.use('/api/auth', authAPI.router);
         this.app.use('/api/tweets', new TwitterAPI(this.db, this.io).router);
+        
+        // /api/users エンドポイントの追加（互換性のため）
+        this.app.get('/api/users/:deviceId', (req, res) => {
+            // /api/auth/user/:deviceId へリダイレクト
+            const authHandler = authAPI.getUser.bind(authAPI);
+            authHandler(req, res);
+        });
         
         // Health check
         this.app.get('/api/health', (req, res) => {
