@@ -399,6 +399,21 @@ class Database {
         return { ...tweet, replies };
     }
     
+    // ユーザーの返信のみ取得
+    async getUserReplies(authorId, limit = 50) {
+        const replies = await this.all(
+            `SELECT t.*, u.nickname as author_nickname 
+             FROM tweets t 
+             JOIN users u ON t.author_id = u.device_id 
+             WHERE t.author_id = ? AND t.reply_to_id IS NOT NULL
+             ORDER BY t.created_at DESC 
+             LIMIT ?`,
+            [authorId, limit]
+        );
+        
+        return replies;
+    }
+    
     // ユーザーのツイート取得
     async getUserTweets(identifier, limit = 50, offset = 0, includeReplies = false) {
         // identifierがdevice_idかnicknameかを判定
@@ -423,6 +438,28 @@ class Database {
         query += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
         
         return await this.all(query, [user.device_id, limit, offset]);
+    }
+    
+    // メンションと返信を取得
+    async getMentionsAndReplies(userIdentifier, limit = 50) {
+        // userIdentifierはnicknameまたはdevice_idの可能性がある
+        const tweets = await this.all(
+            `SELECT DISTINCT t.*, u.nickname as author_nickname 
+             FROM tweets t 
+             JOIN users u ON t.author_id = u.device_id 
+             LEFT JOIN mentions m ON t.id = m.tweet_id 
+             WHERE m.mentioned_user = ? 
+                OR t.reply_to_id IN (
+                    SELECT id FROM tweets WHERE author_id = (
+                        SELECT device_id FROM users WHERE nickname = ? OR device_id = ?
+                    )
+                )
+             ORDER BY t.created_at DESC 
+             LIMIT ?`,
+            [userIdentifier, userIdentifier, userIdentifier, limit]
+        );
+        
+        return tweets;
     }
     
     // メンション付きツイート取得
