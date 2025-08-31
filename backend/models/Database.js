@@ -360,6 +360,21 @@ class Database {
         return tweets;
     }
     
+    // 返信一覧取得
+    async getReplies(tweetId, limit = 50) {
+        const replies = await this.all(
+            `SELECT t.*, u.nickname as author_nickname 
+             FROM tweets t 
+             JOIN users u ON t.author_id = u.device_id 
+             WHERE t.reply_to_id = ? 
+             ORDER BY t.created_at ASC
+             LIMIT ?`,
+            [tweetId, limit]
+        );
+        
+        return replies;
+    }
+    
     // 返信を含むツイート詳細取得
     async getTweetWithReplies(tweetId) {
         const tweet = await this.get(

@@ -817,7 +817,8 @@ class YamadaTwitterApp {
     }
     
     formatTime(timestamp) {
-        const date = new Date(timestamp);
+        // SQLiteのタイムスタンプをUTCとして扱い、正しく解析
+        const date = new Date(timestamp.replace(' ', 'T') + (timestamp.includes('Z') ? '' : 'Z'));
         const now = new Date();
         const diff = now - date;
         
