@@ -67,7 +67,7 @@ class AuthAPI {
             
             // ニックネームの重複チェック（オプション）
             const existingNickname = await this.db.get(
-                'SELECT id FROM users WHERE nickname = ? AND device_id != ? AND is_active = 1',
+                'SELECT device_id FROM users WHERE nickname = ? AND device_id != ?',
                 [nickname, deviceId]
             );
             
@@ -141,7 +141,7 @@ class AuthAPI {
             // device_idで見つからない場合はnicknameで検索
             if (!user) {
                 user = await this.db.get(
-                    'SELECT * FROM users WHERE nickname = ? AND is_active = 1',
+                    'SELECT * FROM users WHERE nickname = ?',
                     [deviceId]
                 );
             }
@@ -204,7 +204,7 @@ class AuthAPI {
             
             // ニックネームの重複チェック
             const duplicateUser = await this.db.get(
-                'SELECT id FROM users WHERE nickname = ? AND device_id != ? AND is_active = 1',
+                'SELECT device_id FROM users WHERE nickname = ? AND device_id != ?',
                 [nickname, deviceId]
             );
             

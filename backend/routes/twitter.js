@@ -263,7 +263,7 @@ class TwitterAPI {
             // nicknameの場合はdevice_idに変換
             let actualUserId = userId;
             const user = await this.db.get(
-                'SELECT device_id FROM users WHERE nickname = ? AND is_active = 1',
+                'SELECT device_id FROM users WHERE nickname = ?',
                 [userId]
             );
             if (user) {
@@ -301,7 +301,7 @@ class TwitterAPI {
             // nicknameの場合はdevice_idに変換
             let actualUserId = userId;
             const user = await this.db.get(
-                'SELECT device_id FROM users WHERE nickname = ? AND is_active = 1',
+                'SELECT device_id FROM users WHERE nickname = ?',
                 [userId]
             );
             if (user) {

@@ -187,14 +187,16 @@ class YamadaTwitterServer {
                     
                     console.log('WebSocket経由ツイート受信:', tweetData, 'from user:', user.nickname);
                     
-                    // ツイートをデータベースに保存
-                    const tweet = await this.db.createTweet({
-                        content: tweetData.content,
-                        authorId: user.deviceId,
-                        author: user.nickname
-                    });
+                    // ユーザー作成または更新
+                    await this.db.createOrUpdateUser(user.deviceId, user.nickname);
                     
-                    console.log('ツイート保存完了:', tweet.id);
+                    // ツイートをデータベースに保存（正しいシグネチャで呼び出し）
+                    const tweetId = await this.db.createTweet(user.deviceId, tweetData.content);
+                    
+                    console.log('ツイート保存完了:', tweetId);
+                    
+                    // 作成したツイートを取得
+                    const tweet = await this.db.getTweet(tweetId);
                     
                     // 全ユーザーに配信（投稿者にも配信）
                     this.io.to('authenticated').emit('newTweet', tweet);
