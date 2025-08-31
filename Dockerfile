@@ -30,11 +30,14 @@ RUN chown -R yamada:nodejs /app
 USER yamada
 
 # ポート公開
-EXPOSE 3000
+EXPOSE 10000
 
-# ヘルスチェック
+# ヘルスチェック（ポート番号を修正）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+    CMD node -e "require('http').get('http://localhost:10000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# 作業ディレクトリを再確認
+WORKDIR /app
 
 # アプリケーション起動
 CMD ["node", "backend/server.js"]
