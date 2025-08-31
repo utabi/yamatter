@@ -386,6 +386,7 @@ class Database {
             `SELECT t.*, u.nickname as author_nickname 
              FROM tweets t 
              JOIN users u ON t.author_id = u.device_id 
+             WHERE t.reply_to_id IS NULL
              ORDER BY t.created_at DESC 
              LIMIT ? OFFSET ?`,
             [limit, offset]
