@@ -269,6 +269,14 @@ class Database {
         return mentions;
     }
     
+    // デバイスIDでユーザーを取得
+    async getUserByDeviceId(deviceId) {
+        return await this.get(
+            'SELECT * FROM users WHERE device_id = ?',
+            [deviceId]
+        );
+    }
+    
     // ユーザー作成または更新
     async createOrUpdateUser(deviceId, nickname = null) {
         const existingUser = await this.get(
