@@ -412,12 +412,12 @@ class YamadaTwitterApp {
         const replies = {};
         
         this.tweets.forEach(tweet => {
-            if (tweet.parent_id) {
+            if (tweet.reply_to_id) {
                 // 返信の場合
-                if (!replies[tweet.parent_id]) {
-                    replies[tweet.parent_id] = [];
+                if (!replies[tweet.reply_to_id]) {
+                    replies[tweet.reply_to_id] = [];
                 }
-                replies[tweet.parent_id].push(tweet);
+                replies[tweet.reply_to_id].push(tweet);
             } else {
                 // 親ツイートの場合
                 parentTweets.push(tweet);
@@ -429,8 +429,13 @@ class YamadaTwitterApp {
         parentTweets.forEach(tweet => {
             html += this.renderTweet(tweet);
             
-            // このツイートへの返信があれば直下に表示
+            // このツイートへの返信があれば直下に表示（古い順 = 新しいものが下）
             if (replies[tweet.id]) {
+                // 返信を時系列順（古い→新しい）にソート
+                replies[tweet.id].sort((a, b) => 
+                    new Date(a.created_at) - new Date(b.created_at)
+                );
+                
                 replies[tweet.id].forEach(reply => {
                     html += this.renderTweet(reply, true); // 返信として表示
                 });
@@ -501,7 +506,11 @@ class YamadaTwitterApp {
             
             const tweetElement = document.querySelector(`[data-tweet-id="${updatedTweet.id}"]`);
             if (tweetElement) {
-                tweetElement.outerHTML = this.renderTweet(updatedTweet);
+                // 元のツイートが返信ツイートかどうかを判定
+                // 1. 既存要素のクラスでチェック
+                // 2. またはreply_to_idフィールドでチェック
+                const isReply = tweetElement.classList.contains('tweet-reply') || !!updatedTweet.reply_to_id;
+                tweetElement.outerHTML = this.renderTweet(updatedTweet, isReply);
             }
         }
     }
@@ -718,15 +727,15 @@ class YamadaTwitterApp {
                 const nestedReplies = {};
                 
                 result.data.forEach(reply => {
-                    if (reply.parent_id === tweetId) {
+                    if (reply.reply_to_id === tweetId) {
                         // 直接の返信
                         directReplies.push(reply);
                     } else {
                         // 返信への返信
-                        if (!nestedReplies[reply.parent_id]) {
-                            nestedReplies[reply.parent_id] = [];
+                        if (!nestedReplies[reply.reply_to_id]) {
+                            nestedReplies[reply.reply_to_id] = [];
                         }
-                        nestedReplies[reply.parent_id].push(reply);
+                        nestedReplies[reply.reply_to_id].push(reply);
                     }
                 });
                 

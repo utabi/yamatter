@@ -193,6 +193,28 @@ class Database {
                 mentioned_user TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (tweet_id) REFERENCES tweets(id) ON DELETE CASCADE
+            )`,
+            
+            // いいねテーブル
+            `CREATE TABLE IF NOT EXISTS tweet_likes (
+                id TEXT PRIMARY KEY,
+                tweet_id TEXT NOT NULL,
+                user_device_id TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tweet_id, user_device_id),
+                FOREIGN KEY (tweet_id) REFERENCES tweets(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_device_id) REFERENCES users(device_id)
+            )`,
+            
+            // リツイートテーブル
+            `CREATE TABLE IF NOT EXISTS tweet_retweets (
+                id TEXT PRIMARY KEY,
+                tweet_id TEXT NOT NULL,
+                user_device_id TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tweet_id, user_device_id),
+                FOREIGN KEY (tweet_id) REFERENCES tweets(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_device_id) REFERENCES users(device_id)
             )`
         ];
         
@@ -370,7 +392,10 @@ class Database {
     // 単一ツイート取得
     async getTweet(tweetId) {
         const tweet = await this.get(
-            `SELECT t.*, u.nickname as author_nickname 
+            `SELECT t.*, u.nickname as author_nickname,
+             (SELECT COUNT(*) FROM tweet_likes WHERE tweet_id = t.id) as likes_count,
+             (SELECT COUNT(*) FROM tweet_retweets WHERE tweet_id = t.id) as retweets_count,
+             (SELECT COUNT(*) FROM tweets WHERE reply_to_id = t.id) as replies_count
              FROM tweets t 
              JOIN users u ON t.author_id = u.device_id 
              WHERE t.id = ?`,
@@ -380,13 +405,15 @@ class Database {
         return tweet;
     }
     
-    // ツイート取得（最新順）
+    // ツイート取得（最新順）- 返信も含めて全て取得
     async getTweets(limit = 50, offset = 0) {
         const tweets = await this.all(
-            `SELECT t.*, u.nickname as author_nickname 
+            `SELECT t.*, u.nickname as author_nickname,
+             (SELECT COUNT(*) FROM tweet_likes WHERE tweet_id = t.id) as likes_count,
+             (SELECT COUNT(*) FROM tweet_retweets WHERE tweet_id = t.id) as retweets_count,
+             (SELECT COUNT(*) FROM tweets WHERE reply_to_id = t.id) as replies_count
              FROM tweets t 
              JOIN users u ON t.author_id = u.device_id 
-             WHERE t.reply_to_id IS NULL
              ORDER BY t.created_at DESC 
              LIMIT ? OFFSET ?`,
             [limit, offset]
@@ -398,7 +425,10 @@ class Database {
     // 返信一覧取得
     async getReplies(tweetId, limit = 50) {
         const replies = await this.all(
-            `SELECT t.*, u.nickname as author_nickname 
+            `SELECT t.*, u.nickname as author_nickname,
+             (SELECT COUNT(*) FROM tweet_likes WHERE tweet_id = t.id) as likes_count,
+             (SELECT COUNT(*) FROM tweet_retweets WHERE tweet_id = t.id) as retweets_count,
+             (SELECT COUNT(*) FROM tweets WHERE reply_to_id = t.id) as replies_count
              FROM tweets t 
              JOIN users u ON t.author_id = u.device_id 
              WHERE t.reply_to_id = ? 
@@ -519,6 +549,71 @@ class Database {
             'SELECT * FROM users WHERE device_id = ? OR nickname = ?',
             [identifier, identifier]
         );
+    }
+    
+    // いいね機能
+    async toggleTweetLike(tweetId, userDeviceId) {
+        const existingLike = await this.get(
+            'SELECT * FROM tweet_likes WHERE tweet_id = ? AND user_device_id = ?',
+            [tweetId, userDeviceId]
+        );
+        
+        if (existingLike) {
+            // いいね取り消し
+            await this.run(
+                'DELETE FROM tweet_likes WHERE tweet_id = ? AND user_device_id = ?',
+                [tweetId, userDeviceId]
+            );
+            return { action: 'unliked' };
+        } else {
+            // いいね追加
+            const likeId = uuidv4();
+            await this.run(
+                'INSERT INTO tweet_likes (id, tweet_id, user_device_id) VALUES (?, ?, ?)',
+                [likeId, tweetId, userDeviceId]
+            );
+            return { action: 'liked' };
+        }
+    }
+    
+    // リツイート機能
+    async toggleTweetRetweet(tweetId, userDeviceId) {
+        const existingRetweet = await this.get(
+            'SELECT * FROM tweet_retweets WHERE tweet_id = ? AND user_device_id = ?',
+            [tweetId, userDeviceId]
+        );
+        
+        if (existingRetweet) {
+            // リツイート取り消し
+            await this.run(
+                'DELETE FROM tweet_retweets WHERE tweet_id = ? AND user_device_id = ?',
+                [tweetId, userDeviceId]
+            );
+            return { action: 'unretweeted' };
+        } else {
+            // リツイート追加
+            const retweetId = uuidv4();
+            await this.run(
+                'INSERT INTO tweet_retweets (id, tweet_id, user_device_id) VALUES (?, ?, ?)',
+                [retweetId, tweetId, userDeviceId]
+            );
+            return { action: 'retweeted' };
+        }
+    }
+    
+    // いいね・リツイートアクションの処理
+    async updateTweetAction(tweetId, action, userDeviceId) {
+        let result;
+        if (action === 'like') {
+            result = await this.toggleTweetLike(tweetId, userDeviceId);
+        } else if (action === 'retweet') {
+            result = await this.toggleTweetRetweet(tweetId, userDeviceId);
+        } else {
+            throw new Error('Invalid action');
+        }
+        
+        const updatedTweet = await this.getTweet(tweetId);
+        return { ...result, tweet: updatedTweet };
     }
     
     // データベースクローズ

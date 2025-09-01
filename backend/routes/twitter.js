@@ -516,8 +516,12 @@ class TwitterAPI {
             // XSS対策: HTMLエスケープ
             const sanitizedContent = this.escapeHtml(content);
             
-            // ユーザー作成または更新
-            await this.db.createOrUpdateUser(authorId, author);
+            // 既存ユーザーの確認（返信は既存ユーザーのみ可能）
+            const user = await this.db.getUserByDeviceId(authorId);
+            if (!user) {
+                // ユーザーが存在しない場合は作成
+                await this.db.createOrUpdateUser(authorId, author);
+            }
             
             // 返信作成（正しいシグネチャで呼び出し）
             const replyId = await this.db.createTweet(authorId, sanitizedContent, id);
