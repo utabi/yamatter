@@ -224,6 +224,23 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
         
+        /* 返信ツイートのスタイル */
+        .tweet-reply {
+            margin-left: 32px;
+            border-left: 3px solid #bdc3c7;
+            background: #f9f9f9;
+        }
+        
+        .tweet-reply:hover {
+            background: #f0f0f0;
+        }
+        
+        .reply-indicator {
+            color: #95a5a6;
+            margin-right: 8px;
+            font-family: monospace;
+        }
+        
         .tweet-header {
             display: flex;
             justify-content: space-between;
@@ -427,6 +444,19 @@
             
             padding: 10px;
             margin-bottom: 8px;
+        }
+        
+        /* ネストされた返信（返信への返信） */
+        .nested-reply {
+            margin-left: 24px;
+            border-left: 2px solid #bdc3c7;
+            background: #f9f9f9;
+        }
+        
+        .nested-reply .reply-indicator {
+            color: #95a5a6;
+            margin-right: 8px;
+            font-family: monospace;
         }
         
         .reply-header {

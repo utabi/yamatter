@@ -407,14 +407,48 @@ class YamadaTwitterApp {
             return;
         }
         
-        timeline.innerHTML = this.tweets.map(tweet => this.renderTweet(tweet)).join('');
+        // ツイートを親ツイートと返信に分類
+        const parentTweets = [];
+        const replies = {};
+        
+        this.tweets.forEach(tweet => {
+            if (tweet.parent_id) {
+                // 返信の場合
+                if (!replies[tweet.parent_id]) {
+                    replies[tweet.parent_id] = [];
+                }
+                replies[tweet.parent_id].push(tweet);
+            } else {
+                // 親ツイートの場合
+                parentTweets.push(tweet);
+            }
+        });
+        
+        // 親ツイートとその返信をレンダリング
+        let html = '';
+        parentTweets.forEach(tweet => {
+            html += this.renderTweet(tweet);
+            
+            // このツイートへの返信があれば直下に表示
+            if (replies[tweet.id]) {
+                replies[tweet.id].forEach(reply => {
+                    html += this.renderTweet(reply, true); // 返信として表示
+                });
+            }
+        });
+        
+        timeline.innerHTML = html;
     }
     
-    renderTweet(tweet) {
+    renderTweet(tweet, isReply = false) {
         const repliesCount = tweet.replies_count || 0;
+        const replyClass = isReply ? 'tweet-reply' : '';
+        const replyIndicator = isReply ? '<span class="reply-indicator">└→</span>' : '';
+        
         return `
-            <div class="tweet" data-tweet-id="${tweet.id}" onclick="app.openReplyView('${tweet.id}')">
+            <div class="tweet ${replyClass}" data-tweet-id="${tweet.id}" onclick="app.openReplyView('${tweet.id}')">
                 <div class="tweet-header">
+                    ${replyIndicator}
                     <span class="tweet-author" onclick="event.stopPropagation(); viewProfile('${tweet.author_id}')" style="cursor: pointer; text-decoration: underline;">${this.escapeHtml(tweet.author_nickname)}</span>
                     <span class="tweet-time">${this.formatTime(tweet.created_at)}</span>
                 </div>
@@ -679,15 +713,37 @@ class YamadaTwitterApp {
             if (!repliesList) return;
             
             if (result.success && result.data.length > 0) {
-                repliesList.innerHTML = result.data.map(reply => `
-                    <div class="reply">
-                        <div class="reply-header">
-                            <span class="reply-author">${this.escapeHtml(reply.author_nickname)}</span>
-                            <span class="reply-time">${this.formatTime(reply.created_at)}</span>
-                        </div>
-                        <div class="reply-content">${this.decorateText(reply.content)}</div>
-                    </div>
-                `).join('');
+                // 返信を階層構造で整理
+                const directReplies = [];
+                const nestedReplies = {};
+                
+                result.data.forEach(reply => {
+                    if (reply.parent_id === tweetId) {
+                        // 直接の返信
+                        directReplies.push(reply);
+                    } else {
+                        // 返信への返信
+                        if (!nestedReplies[reply.parent_id]) {
+                            nestedReplies[reply.parent_id] = [];
+                        }
+                        nestedReplies[reply.parent_id].push(reply);
+                    }
+                });
+                
+                // スレッド形式でHTMLを生成
+                let html = '';
+                directReplies.forEach(reply => {
+                    html += this.renderReplyInModal(reply, false);
+                    
+                    // この返信への返信があれば表示
+                    if (nestedReplies[reply.id]) {
+                        nestedReplies[reply.id].forEach(nestedReply => {
+                            html += this.renderReplyInModal(nestedReply, true);
+                        });
+                    }
+                });
+                
+                repliesList.innerHTML = html;
             } else {
                 repliesList.innerHTML = '<div class="no-replies">まだ返信がありません</div>';
             }
@@ -699,6 +755,22 @@ class YamadaTwitterApp {
                 repliesList.innerHTML = '<div class="error">返信の読み込みに失敗しました</div>';
             }
         }
+    }
+    
+    renderReplyInModal(reply, isNested = false) {
+        const nestedClass = isNested ? 'nested-reply' : '';
+        const nestedIndicator = isNested ? '<span class="reply-indicator">└→</span>' : '';
+        
+        return `
+            <div class="reply ${nestedClass}">
+                <div class="reply-header">
+                    ${nestedIndicator}
+                    <span class="reply-author">${this.escapeHtml(reply.author_nickname)}</span>
+                    <span class="reply-time">${this.formatTime(reply.created_at)}</span>
+                </div>
+                <div class="reply-content">${this.decorateText(reply.content)}</div>
+            </div>
+        `;
     }
     
     async deleteTweet(tweetId) {
